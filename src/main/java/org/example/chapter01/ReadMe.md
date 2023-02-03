@@ -202,6 +202,152 @@ public class TicketSeller {
   
 절차적 프로그래밍의 큰 문제는, 변경에 취약하다는 점이다. 즉 데이터 변경으로 인한 영향을 지역적으로 고립시키기 어렵다.  
   
-객체지향 프로그래밍은 데이터와 프로세스가 동일한 모듈 내부에 위치하도록 프로그래밍을 한다.   
-   
-### 책임의 이동 
+객체지향 프로그래밍은 데이터와 프로세스가 동일한 모듈 내부에 위치하도록 프로그래밍을 한다.  
+
+### 책임의 이동  
+절차지향과 객체지향의 근본적인 차이를 만드는 것은 **책임의 이동**이다.  
+절차향적인 구조는 책임이 Theater 에 집중되어 있다.  
+  
+그에반해 객체지향 설계는 제어 흐름이 각 객체에 적절하게 분산되어 있다.  
+> 하나의 기능을 완성하는데 필요한 책임이 여러 객체에 걸쳐 분산돼 있는 것이다.  
+  
+변경 전 절차적 설계에서는 Theater 가 전체적인 작업을 도맡아 처리했다.  
+변경 후의 객체지향 설계에서는 각 객체가 자신이 맡은 일을 스스로 처리했다. 즉 Theater 에 몰려있던 책임이 개별 객체로 이동한 것이다.  
+이것이 **책임의 이동**이 의미하는 것이다.  
+  
+객체지향 설계에서는 독재자가 존재하지 않고 각 객체에 책임이 적절하게 분배된다. 따라서 각 객체는 **자신을 스스로 책임진다.**  
+설계를 할 땐, 객체가 어떤 데이터를 가지냐보다는 객체에 어떤 책임을 할당할 것이냐에 초점을 맞춰야 한다.   
+  
+> 객체를 설계할 땐, 불필요한 **의존성** 제거하기  
+> 객체의 세부사항을 내부로 감춰 **캡슐화**  
+> 캡슐화를 통해 객체의 **자율성을 높이고 응집도를 높인다.**  
+  
+
+
+### 더 개선할 수 있다.
+현재의 설계는 이전의 설계보다 분명히 좋아졌지만, 아직도 개선의 여지가 있다. 
+```java
+public class Audience {
+    public Long buy(Ticket ticket) {
+        if (bag.hasInvitation()) {
+            bag.setTicket(ticket);
+            return 0L;
+        }else {
+            bag.setTicket(ticket);
+            bag.minusAmount(ticket.getFee());
+            return ticket.getFee();
+        }
+    }
+}
+```  
+Audience 를 보면 Bag 이 자기 자신을 책임지지 않고 Audience 에 의해 끌려다니는 수동적인 존재다.  
+Bag의 내부 상태에 접근하는 모든 로직을 Bag 안으로 캡슐화해서 결합도를 낮춰보자.
+
+```java
+import org.example.chapter01.ticket.Invitation;
+
+public class Bag {
+    private Long amount;
+    private Ticket ticket;
+    private Invitation invitation;
+
+    public Long hold(Ticket ticket) {
+        if (hasInvitation()) {
+            setTicket(ticket);
+            return 0L;
+        } else {
+            setTicket(ticket);
+            minusAmount(ticket.getFee());
+            return ticket.getFee();
+        } 
+    }
+}
+```  
+public 메서드였던 hasInvitation, minusAmount, setTicket 메서드들은 더이상 외부에서 사용되지 않고 내부에서만 사용되기 때문에 접근제어자를 private 으로 설정해준다.  
+  
+Bag 의 구현을 캡슐화 시켰으니 이제 Audiecne 를 Bag 의 구현이 아닌 인터페이스에만 의존하도록 수정하자  
+```java
+public class Audience {
+    public Long buy(Ticket ticket) {
+        return bag.hold(ticket);
+    }
+}
+```  
+  
+TicketSeller 역시 TicketOffice 의 자율권을 침해한다.
+
+```java
+import org.example.chapter01.ticket.Audience;
+
+public class TicketSeller {
+    public void sellTo(Audience audience) {
+        ticketOffice.plusAmount(audience.buy(ticketOffice.getTicket()));
+    }
+}
+```
+현재의 TicketSeller 는 TicketOffice 에 있는 Ticket 을 마음대로 꺼내서는 자기 멋대로 Audience 에게 팔고 Audience 에게 받은 돈을 마음대로 TicketOffice 에 넣어버린다.   
+  
+잃어버린 TicketOffice 의 자율권을 찾아주자.
+
+```java
+import org.example.chapter01.ticket.Audience;
+
+public class TicketOffice {
+    public void sellTicketTo(Audience audience) {
+        plusAmount(audience.buy(getTicket));
+    }
+}
+```
+
+```java
+import org.example.chapter01.ticket.Audience;
+
+public class TicketSeller {
+    public void sellTo(Audience audience) {
+        ticketOffice.sellTicketTo(audience);
+    }
+}
+```  
+  
+이렇게 바꾸면 만족스러운가?  
+아쉽지만 처음 생각한 것 만큼 만족스럽진 않은데, 그 이유는 TicketOffice 와 Audience 사이에 의존성이 추가됐기 때문이다.  
+  
+현재로서는 Audience 에 대한 결합도와 TicketOffice 의 자율성 모두를 만족시키는 방법이 떠오르지 않는다.  
+이제 TradeOff 의 시점이 온 것이다. 
+  
+이 작은 예제를 통해 두 가지 사실을 알 수 있었다. 
+1. 어떤 기능을 설계하는 방법은 한 가지 이상일 수 있다. 
+2. 동일한 기능을 가진 한 가지 이상의 방법으로 설계할 수 있기 때문에 결국 설계는 트레이드오프의 산물이다. 
+  
+설계는 균형의 예술이다. 훌륭한 설계는 적절한 트레이드 오프의 결과물이라는 사실을 명심해야 한다.   
+  
+### 그래! 거짓말이다!  
+현실과는 달리 코드에서는 무생물을 생물과 같이 스스로 행동하도록 다룬다. 
+레베카 워프스브록은 이처럼 능동적이고 자율적인 존재로 소프트웨어 객체를 설계하는 원칙을 가리켜 **의인화(anthropomorphism)** 라고 부른다.  
+  
+앞에서는 실세계에서의 생물처럼 스스로 생각하고 행동하도록 소프트웨어 객체를 설계하는 것이 이해하기 쉬운 코드를 작성하는 것이라고 설명했다.  
+이제서야 말을 바꾸자면, 훌륭한 객체지향설계란 소프트웨어를 구성하는 모든 객체들이 자율적으로 행동하는 설계를 가리킨다.  
+비록 현실에서는 생명이 없는 수동적인 존재라고 하더라도, 객체지향의 세계로 넘어오는 순간 그들은 생명과 지능을 가진 싱싱한 존재로 다시 태어난다.  
+  
+# 04. 객체지향 설계  
+### 설계가 왜 필요한가  
+> 설계란 코드를 배치하는 것이다.  
+  
+어떤 사람들은 설계가 코드를 작성하는 것보다는 높은 차원의 창조적인 행위라고 생각하는 것 같다. 하지만 설계를 구현과 떨어트려서 이야기하는 것은 불가능하다.    
+ 
+> 우리는 오늘 완성해야 하는 기능을 구현하는 코드를 짜야 하는 동시에,  
+> 내일 쉽게 변경할 수 있는 코드를 짜야한다.  
+> 좋은 설계란 오늘 여구하는 기능을 온전히 수행하면서 내일의 변경을 매끄럽게 수용할 수 있는 설계다.   
+  
+변경할 수 있는 코드가 중요한 이유는, 요구사항이 계속 변경되기 때문이다.   
+또한 코드를 변경하면 버그가 발생할 수 있다.  
+-> 요구사항은 변경될 것이고, 버그는 계속해서 발생할 것이다.   
+  
+### 객체지향 설계  
+> 우리가 진정으로 원하는 것은 변경에 유연하게 대응할 수 있는 코드다.  
+  
+예제코드에서 관람객을 입장시키는 일련의 과정들이 Audience, TicketSeller, Bag 인스턴스 간의 상호작용을 통해 구현됐다는 사실을 기억하자.  
+이 과정에서 객체들은 메시지를 통해 협력했다.  
+  
+이처럼 애플리케이션의 기능을 구현하기 위해 객체들이 협력하는 과정 속에서 객체들은 다른 객체에 의존하게 된다.  
+객체들 간의 결합이 객체 사이의 **의존성**을 만든다. 
