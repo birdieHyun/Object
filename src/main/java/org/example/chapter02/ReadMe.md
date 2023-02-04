@@ -137,3 +137,41 @@ Screening의 reserve 메서드를 보면 calculateFee라는 private 메서드를
 객체가 다른 객체와 상호작용 할 수 있는 방법은 **메시지를 전송하고 메시지를 수신**하는 방법 뿐이다.  
 **메서드**는 수신된 메시지를 처리하기 위한 자신만의 방법이다.  
   
+## 03. 할인요금 구하기 
+### 할인 요금 계산을 위한 협력 시작하기  
+```java
+package org.example.chapter02.movie;
+
+public class Movie {
+    private String title;
+    private Duration runningTime;
+    private Money fee;
+    private DiscountPolicy discountPolicy;
+
+    public Movie(String title, Duration runningTime, Money fee, DiscountPolicy discountPolicy) {
+        this.title = title;
+        this.runningTime = runningTime;
+        this.fee = fee;
+        this.discountPolicy = discountPolicy;
+    }
+    
+    public Money getFee() {
+        return fee;
+    }
+
+    public Money calculateMovieFee(Screening screening) {
+        return fee.minus(discountPolicy.calculateDiscountAmount(screening));
+    }
+}
+```  
+calculateMovieFee 메서드는 discountPolicy에 calculateDiscountAmount 메시지를 전송해 할인 요금을 반환받는다.  
+Movie는 기본요금인 fee 에서 반환된 할인 요금을 차감한다.  
+  
+이 메서드에는 한 가지 이상한 점이 있다.  
+어떤 할인 정책을 사용할 것인지 결정하는 코드가 어디에도 없다.  
+할인 정책은 고정 혹은 비율로 설정할 것인데!  
+  
+이 코드는 **상속과 다형성** 두 가지 개념이 섞여 있다.  
+이 기반에는 **추상화**라는 원리가 숨어져있다.  
+  
+### 할인 정책과 할인 조건  
