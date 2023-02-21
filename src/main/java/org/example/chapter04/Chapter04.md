@@ -1,0 +1,187 @@
+# 설계 품질과 트레이드오프  
+  
+객체지향 설계의 핵심은 역할, 책임, 협력 이다.   
+**협력**은 애플리케이션의 기능을 구현하기 위해 메시지를 주고받는 객체들 사이의 상호작용이다.  
+**책임**은 객체가 다른 객체와 협력하기 위해 수행하는 행동이다.  
+**역할**은 대체 가능한 책임의 집합이다.  
+  
+책임 주도 설라는 이름에서 알 수 있듯이, **책임**이 가장 중요하다.  
+결합도를 낮추고 응집도를 높여야 한다.  
+    
+어떤 때에는 좋은 코드를 보는것 보다, 나쁜 코드를 보는 것이 더 도움이 될 때가 있다.  
+
+이번 장에서는 영화 예매 시스템을 책임이 아닌 상태를 표현하는 데이터 중심의 설계를 살펴보고,  
+객체지향적으로 설계한 구조와 어떤 차이점이 있는지 살펴보자.  
+  
+### 01. 데이터 중심의 영화 예매 시스템   
+객체지향 설계에서는 두 가지 방법을 이용해 시스템을 객체로 분할할 수 있다.  
+1. 상태를 분할의 중심축으로 삼는 방법이다.  
+2. 책임을 분할의 중심축으로 삼는 방법이다.  
+  
+일반적으로 객체의 상태는 객체가 저장해야 하는 데이터의 집합을 의미하기 때문에, 여기서는 '상태'와 '데이터'를 동일한 의미로 사용하겠다.  
+  
+결론부터 이야기 하자면, 훌륭한 객체지향 설계는 데이터가 아니라 책임에 초점을 맞춰야 한다.  
+이유는 변경과 관련이 있다.  
+  
+객체의 상태는 구현에 속한다. 구현은 불안정하기 때문에 변하기 쉽다.  
+상태를 객체 분할의 중심축으로 삼으면, 구현에 관한 세부사항이 객체의 인터페이스에 스며들게 되어 캡슐화의 원칙이 무너진다.  
+  
+그에 비해, 객체의 책임은 인터페이스에 속한다.   
+객체는 책임을 드러내는 안정적인 인터페이스 뒤로 책임을 수행하는데 필요한 상태를 캡슐화 함으로써 구현 변경에 대한 파장이 외부로 퍼져나가는 것을 방지한다.  
+따라서 책임에 초점을 맞추면 상대적으로 변경에 안정적인 설계를 얻을 수 있게 된다.  
+  
+이제 데이터 중심 설계를 살펴보고, 책임 주도 설계 방법이 어떻게 좋은지 살펴보자.  
+    
+
+### 데이터를 준비하자  
+데이터 중심의 설계란, 객체 내부에 저장되는 데이터를 기반으로 시스템을 분할하는 방법이다.  
+책임 중심의 설계가 '책임이 무엇인가'를 묻는 것으로 시작한다면   
+**데이터 중심 설계는 객체가 내부에 저장해야 하는 '데이터가 무엇인가'** 를 묻는 것으로 시작한다.    
+  
+```java
+public class Movie {
+    private String title; 
+    private Duration RunningTime;
+    private Money fee;
+    private List<DiscoutnCondition> discoutnConditions;
+    
+    private MovieType movieType;
+    private Money money;
+    private double discountPercent;   
+    
+}
+```
+  
+영화를 표현하는 가장 기본적인 정보까지는 동일하다.  
+기존의 설계와 동일한 부분은 여기까지이다.  
+  
+가장 두드러지는 차이점은, 할인 조건의 목록 (discountCondition)이 인스턴스 변수로 Movie 안에 직접 포함되어 있다는 것이다.  
+  
+어떤 할인을 하는지 알 수 있는 방법은 movieType 을 통해 알 수 있다.  
+MovieType 의 값에 따라 금액할인인지, 비율할인인지 알 수 있는 것이다.    
+  
+```java
+public enum MovieType {
+    AMOUNT_DISCOUNT,   // 금액 할인 정책
+    PERCENT_DISCOUNT,  // 비율 할인 정책
+    NONE_DISCOUNT      // 미적용 
+}
+```
+  
+이는 완벽한 데이터 중심 설계이다.  
+데이터 중심의 설계에서는 객체가 포함해야 하는 데이터에 집중한다.  
+이 객체가 포함해야 하는 데이터는 무엇인가에 집중한다면, 데이터 주도 설계에 매몰될 수 있다.   
+  
+이제 필요한 데이터는 완성되었으므로, 접근자와 수정자를 추가한다.  
+  
+Movie 를 구현하는데 필요한 데이터를 결정했고, 내부 데이터를 캡슐화 하는데도 성공했다.  
+    
+할인 조건의 타입을 저장한다. 
+```java
+public enum DiscountConditionType {
+    SEQUENCE,  // 순번 조건 
+    PERIOD     // 기간 조건 
+}
+
+```
+  
+```java
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+
+public class DiscountCondition {
+    
+    private DiscountConditionType type;
+    
+    private int sequence; 
+    
+    private DayOfWeek dayOfWeek;
+    private LocalTime StartTime;
+    private LocalTime endTime;
+    
+}
+
+```
+DiscountCondition도 게터세터 추가한다.   
+  
+이어서 Screening 클래스 구현   
+```java
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+public class Screening {
+    
+    private Movie movie;
+    private int sequence;
+    private LocalDateTime localDateTime;
+    
+}
+```  
+  
+영화 예매 시스템의 목적은 영화를 예매하는 것이다.  
+Reservation 클래스 구현하자  
+```java
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class Reservation {
+    private Customer customer;
+    private Screening screening;
+    private Money fee; 
+    private int audienceCount;
+
+    public Reservation(Customer customer, Screening screening, Money fee, int audienceCount) {
+        this.customer = customer;
+        this.screening = screening;
+        this.fee = fee;
+        this.audienceCount = audienceCount;
+    }
+}
+```
+  
+Customer 는 고객의 정보를 보관하는 간단한 클래스  
+  
+```java
+public class Customer {
+    private String name;
+    private String id;
+
+    public Customer(String name, String id) {
+        this.name = name;
+        this.id = id;
+    }
+}
+```  
+  
+### 영화를 예매하자  
+reserve 메서드는 데이터를 중심으로 비교하며 할인을 결정하고 있따. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
