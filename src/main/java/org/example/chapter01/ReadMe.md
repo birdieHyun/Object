@@ -23,7 +23,7 @@ C 는 절차지향 패러다임
   
 지금까지 구현한 코드는 제대로 실행되기는 하지만, 변경에 용이하지 못하고, 이해하기 쉬운 코드는 아니다. 
 
-Theater 클래스의 enter 메서드가 수행하는 일을 말로 풀어보면 
+Theater 클래스의 enter 메서드가 수행하는 일을 말로 풀어보면 d
 ```java
 class Theater {
     public void enter(Audience audience) {
